@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4CAF50">
+    <meta name="description" content="A simple volumetric calculator for calculating weights based on dimensions and mode.">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Volumetric Calculator</title>
+    <link rel="manifest" href="/volumetric-calculator/manifest.json">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .input-group {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        label {
+            display: inline-block;
+            width: 120px;
+        }
+        button {
+            margin: 10px 5px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #result {
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .weight-column {
+            white-space: nowrap;
+            width: 80px;
+        }
+        .total-row td {
+            font-weight: bold;
+        }
+        .mode-input {
+            width: 60px;
+            margin-left: 10px;
+        }
+        .note {
+            margin-top: 20px;
+            color: #888;
+            font-size: 0.8em;
+        }
+        .delete-btn {
+            background-color: #ff4444;
+            padding: 5px 10px;
+            font-size: 0.8em;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h2>Volumetric Calculator</h2>
+    
+    <div class="input-group">
+        <label for="length">Length:</label>
+        <input type="number" id="length" min="0" step="0.1" required>
+    </div>
+    
+    <div class="input-group">
+        <label for="breadth">Breadth:</label>
+        <input type="number" id="breadth" min="0" step="0.1" required>
+    </div>
+    
+    <div class="input-group">
+        <label for="height">Height:</label>
+        <input type="number" id="height" min="0" step="0.1" required>
+    </div>
+    
+    <div class="input-group">
+        <label for="mode">Mode:</label>
+        <select id="mode" onchange="updateFactor()">
+            <option value="SF">SF</option>
+            <option value="AC">AC</option>
+            <option value="RD">RD</option>
+        </select>
+        <input type="number" id="factor" min="1" step="1" class="mode-input">
+    </div>
+    
+    <div class="input-group">
+        <label for="pieces">No of Pieces:</label>
+        <input type="number" id="pieces" min="1" value="1" required>
+    </div>
+    
+    <button onclick="addAndCalculate()">Add Box</button>
+    <button onclick="reset()">Reset</button>
+    
+    <div id="result"></div>
+
+    <div class="note">
+        <strong>Note:</strong><br>
+        SF: (Length * Breadth * Height) / CFT<br>
+        AC: (Length * Breadth * Height) / CFT<br>
+        RD: ((Length * Breadth * Height) / 27000) * CFT
+    </div>
+
+    <script>
+        let boxes = [];
+        const defaultFactors = {
+            'SF': 4750,
+            'AC': 5000,
+            'RD': 8
+        };
+
+        document.getElementById('factor').value = defaultFactors['SF'];
+
+        function updateFactor() {
+            const mode = document.getElementById('mode').value;
+            document.getElementById('factor').value = defaultFactors[mode];
+        }
+
+        function calculateWeight(length, breadth, height, mode, pieces, factor) {
+            const baseVolume = length * breadth * height;
+            let weight;
+
+            if (mode === 'RD') {
+                weight = ((baseVolume / 27000) * factor) * pieces;
+            } else {
+                weight = (baseVolume / factor) * pieces;
+            }
+            return weight;
+        }
+
+        function deleteBox(index) {
+            boxes.splice(index, 1);
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            if (boxes.length === 0) {
+                document.getElementById('result').innerHTML = '';
+                return;
+            }
+
+            let output = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>S.No</th>
+                            <th>(L*B*H, Mode, CFT, Pcs)</th>
+                            <th>Weight</th>
+                            <th>Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+            
+            let totalWeight = 0;
+
+            boxes.forEach((box, index) => {
+                const weight = calculateWeight(box.length, box.breadth, box.height, box.mode, box.pieces, box.factor);
+                totalWeight += weight;
+                output += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>(${box.length}*${box.breadth}*${box.height}, ${box.mode}, ${box.factor}, ${box.pieces}pcs)</td>
+                        <td class="weight-column">${weight.toFixed(3)} Kg</td>
+                        <td><button class="delete-btn" onclick="deleteBox(${index})">Delete</button></td>
+                    </tr>`;
+            });
+
+            output += `
+                    <tr class="total-row">
+                        <td colspan="2">Total Weight:</td>
+                        <td class="weight-column">${totalWeight.toFixed(3)} Kg</td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>`;
+            document.getElementById('result').innerHTML = output;
+        }
+
+        function addAndCalculate() {
+            const length = parseFloat(document.getElementById('length').value);
+            const breadth = parseFloat(document.getElementById('breadth').value);
+            const height = parseFloat(document.getElementById('height').value);
+            const mode = document.getElementById('mode').value;
+            const pieces = parseInt(document.getElementById('pieces').value);
+            const factor = parseFloat(document.getElementById('factor').value);
+
+            if (isNaN(length) || isNaN(breadth) || isNaN(height) || isNaN(pieces) || isNaN(factor)) {
+                alert('Please enter valid numbers');
+                return;
+            }
+
+            boxes.push({
+                length: length,
+                breadth: breadth,
+                height: height,
+                mode: mode,
+                pieces: pieces,
+                factor: factor
+            });
+
+            document.getElementById('length').value = '';
+            document.getElementById('breadth').value = '';
+            document.getElementById('height').value = '';
+
+            updateDisplay();
+        }
+
+        function reset() {
+            boxes = [];
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('length').value = '';
+            document.getElementById('breadth').value = '';
+            document.getElementById('height').value = '';
+            document.getElementById('pieces').value = '1';
+            document.getElementById('factor').value = defaultFactors['SF'];
+        }
+
+        // Register the service worker for PWA functionality
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/volumetric-calculator/sw.js')
+                    .then(registration => {
+                        console.log('Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
