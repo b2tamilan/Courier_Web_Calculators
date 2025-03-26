@@ -272,7 +272,7 @@
 
         .highlight {
             font-weight: bold;
-            color: #3F7D58; /* Changed to bright red for visibility */
+            color: #3F7D58;
         }
 
         .spinner {
@@ -373,6 +373,13 @@
                     <input type="number" id="fuel" value="0" min="0" aria-label="Fuel percentage" required>
                     <div id="fuelError" class="error"></div>
                 </div>
+                <div class="form-group">
+                    <label for="fuelOnRateOnly">
+                        <input type="checkbox" id="fuelOnRateOnly" aria-label="Calculate fuel charge on rate cost only">
+                        Calculate Fuel Charge on Rate Cost Only
+                        <span title="If checked, fuel charge will be calculated only on Rate Cost, and other charges will be added later">ℹ️</span>
+                    </label>
+                </div>
             </fieldset>
             <fieldset>
                 <legend>Tax</legend>
@@ -425,13 +432,15 @@
             button.textContent = document.body.classList.contains('dark') ? 'Switch to Light Mode' : 'Switch to Dark Mode';
         }
 
-        function calculateCharges({ weight, rate, riskChargePercent, materialInvoiceValue, docketCharge, handling, oda, fuelPercent, gstPercent }) {
+        function calculateCharges({ weight, rate, riskChargePercent, materialInvoiceValue, docketCharge, handling, oda, fuelPercent, gstPercent, fuelOnRateOnly }) {
             const rateCost = weight * rate;
             const riskChargeCalc = (materialInvoiceValue * riskChargePercent) / 100;
             const riskCharge = riskChargePercent === 0 ? 0 : Math.max(riskChargeCalc, 100);
-            const fuelBase = rateCost + docketCharge + riskCharge + handling + oda;
+
+            const fuelBase = fuelOnRateOnly ? rateCost : (rateCost + docketCharge + riskCharge + handling + oda);
             const fuelCharge = (fuelBase * fuelPercent) / 100;
-            const taxableValue = fuelBase + fuelCharge;
+
+            const taxableValue = fuelOnRateOnly ? (rateCost + fuelCharge + docketCharge + riskCharge + handling + oda) : (fuelBase + fuelCharge);
             const gst = (taxableValue * gstPercent) / 100;
             const grandTotalBeforeRound = taxableValue + gst;
             const roundValue = Math.round(grandTotalBeforeRound) - grandTotalBeforeRound;
@@ -457,7 +466,8 @@
                 handling: getInputValue('handling'),
                 oda: getInputValue('oda'),
                 fuelPercent: getInputValue('fuel'),
-                gstPercent: getInputValue('gst')
+                gstPercent: getInputValue('gst'),
+                fuelOnRateOnly: document.getElementById('fuelOnRateOnly').checked
             };
 
             if (inputs.weight === 0) return showError('weight', 'Weight must be greater than 0');
