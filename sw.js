@@ -1,13 +1,13 @@
 const CACHE_NAME = 'courier-calculators-v1';
 const urlsToCache = [
-    '/',
-    '/index.html',
-    '/volumetric-calculator.html',
-    '/reverse-pickup.html',
-    '/styles.css',
-    '/manifest.json',
-    '/icon-192x192.png',
-    '/icon-512x512.png'
+    '/Courier_Web_Calculators/',
+    '/Courier_Web_Calculators/index.html',
+    '/Courier_Web_Calculators/volumetric-calculator.html',
+    '/Courier_Web_Calculators/reverse-pickup.html',
+    '/Courier_Web_Calculators/styles.css',
+    '/Courier_Web_Calculators/manifest.json',
+    '/Courier_Web_Calculators/icon-192x192.png',
+    '/Courier_Web_Calculators/icon-512x512.png'
 ];
 
 self.addEventListener('install', event => {

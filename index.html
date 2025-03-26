@@ -6,14 +6,14 @@
     <meta name="theme-color" content="#4CAF50">
     <meta name="description" content="Courier Calculators - Tools for calculating volumetric weight and reverse pickup costs.">
     <title>Courier Calculators</title>
-    <link rel="manifest" href="/manifest.json">
-    <link rel="stylesheet" href="/styles.css">
+    <link rel="manifest" href="/Courier_Web_Calculators/manifest.json">
+    <link rel="stylesheet" href="/Courier_Web_Calculators/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <header>
         <div class="logo">
-            <img src="/icon-192x192.png" alt="Courier Calculators Logo" width="50">
+            <img src="/Courier_Web_Calculators/icon-192x192.png" alt="Courier Calculators Logo" width="50">
             <h1>Courier Calculators</h1>
         </div>
     </header>
@@ -22,8 +22,8 @@
             <h2>Welcome to Courier Calculators</h2>
             <p>Choose a tool to calculate your courier costs efficiently.</p>
             <div class="calculator-options">
-                <a href="/volumetric-calculator.html" class="calculator-btn">Volumetric Calculator</a>
-                <a href="/reverse-pickup.html" class="calculator-btn">Reverse Pickup Cost Calculator</a>
+                <a href="/Courier_Web_Calculators/volumetric-calculator.html" class="calculator-btn">Volumetric Calculator</a>
+                <a href="/Courier_Web_Calculators/reverse-pickup.html" class="calculator-btn">Reverse Pickup Cost Calculator</a>
             </div>
         </section>
     </main>
@@ -33,7 +33,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
+                navigator.serviceWorker.register('/Courier_Web_Calculators/sw.js')
                     .then(registration => {
                         console.log('Service Worker registered with scope:', registration.scope);
                     })
