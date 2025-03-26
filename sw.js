@@ -5,7 +5,9 @@ const urlsToCache = [
     '/volumetric-calculator.html',
     '/reverse-pickup.html',
     '/styles.css',
-    '/manifest.json'
+    '/manifest.json',
+    '/icon-192x192.png',
+    '/icon-512x512.png'
 ];
 
 self.addEventListener('install', event => {
