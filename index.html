@@ -8,15 +8,28 @@
     <title>Courier Calculators</title>
     <link rel="manifest" href="/manifest.json">
     <link rel="stylesheet" href="/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <main>
-        <h1>Courier Calculators</h1>
-        <div class="calculator-options">
-            <a href="/volumetric-calculator.html" class="calculator-btn">Volumetric Calculator</a>
-            <a href="/reverse-pickup.html" class="calculator-btn">Reverse Pickup Cost Calculator</a>
+    <header>
+        <div class="logo">
+            <img src="/icons/icon-192x192.png" alt="Courier Calculators Logo" width="50">
+            <h1>Courier Calculators</h1>
         </div>
+    </header>
+    <main>
+        <section class="hero">
+            <h2>Welcome to Courier Calculators</h2>
+            <p>Choose a tool to calculate your courier costs efficiently.</p>
+            <div class="calculator-options">
+                <a href="/volumetric-calculator.html" class="calculator-btn">Volumetric Calculator</a>
+                <a href="/reverse-pickup.html" class="calculator-btn">Reverse Pickup Cost Calculator</a>
+            </div>
+        </section>
     </main>
+    <footer>
+        <p>&copy; 2025 Courier Calculators. All rights reserved.</p>
+    </footer>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
