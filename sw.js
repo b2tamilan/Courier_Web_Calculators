@@ -1,4 +1,5 @@
-const CACHE_NAME = 'courier-calculators-v1';
+const CACHE_NAME = 'courier-calculators-v2'; // Cache name-ஐ மாற்றவும் (v1 → v2)
+
 const urlsToCache = [
     '/Courier_Web_Calculators/',
     '/Courier_Web_Calculators/index.html',
@@ -18,6 +19,8 @@ self.addEventListener('install', event => {
                 return cache.addAll(urlsToCache);
             })
     );
+    // Service Worker-ஐ உடனடியாக activate செய்ய
+    self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
@@ -27,19 +30,41 @@ self.addEventListener('activate', event => {
             return Promise.all(
                 cacheNames.map(cacheName => {
                     if (cacheWhitelist.indexOf(cacheName) === -1) {
+                        console.log('Deleting old cache:', cacheName);
                         return caches.delete(cacheName);
                     }
                 })
             );
         })
     );
+    // Clients-ஐ உடனடியாக control செய்ய
+    self.clients.claim();
 });
 
 self.addEventListener('fetch', event => {
     event.respondWith(
         caches.match(event.request)
             .then(response => {
-                return response || fetch(event.request);
+                // Cache-ல் இருந்தால் அதை பயன்படுத்தவும், இல்லையென்றால் network-ல் இருந்து பெறவும்
+                if (response) {
+                    // Network-ல் புதிய பதிப்பு உள்ளதா என்று சரிபார்க்க
+                    fetch(event.request).then(networkResponse => {
+                        if (networkResponse.ok) {
+                            caches.open(CACHE_NAME).then(cache => {
+                                cache.put(event.request, networkResponse.clone());
+                            });
+                        }
+                    }).catch(() => {});
+                    return response;
+                }
+                return fetch(event.request).then(networkResponse => {
+                    if (networkResponse.ok) {
+                        caches.open(CACHE_NAME).then(cache => {
+                            cache.put(event.request, networkResponse.clone());
+                        });
+                    }
+                    return networkResponse;
+                });
             })
     );
 });
