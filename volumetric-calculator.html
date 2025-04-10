@@ -144,7 +144,7 @@
         button:hover {
             background-color: #1c7430;
             transform: scale(1.02);
-            box-shadow: 0 4px 10px rgba ори0, 0, 0, 0.2);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         }
 
         button.reset {
@@ -162,6 +162,15 @@
 
         #toggleMode:hover {
             background-color: #0056b3;
+        }
+
+        #homeButton {
+            background-color: #6c757d; /* Gray color for Home button */
+            margin-top: calc(var(--spacing-unit) * 2);
+        }
+
+        #homeButton:hover {
+            background-color: #5a6268;
         }
 
         #result {
@@ -297,6 +306,8 @@
             AC: (Length * Breadth * Height) / CFT<br>
             RD: ((Length * Breadth * Height) / 27000) * CFT
         </div>
+
+        <button id="homeButton" onclick="window.location.href='index.html'">Back to Main Menu</button>
     </main>
 
     <script>
