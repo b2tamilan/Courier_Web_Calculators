@@ -10,61 +10,204 @@
     <title>Volumetric Calculator</title>
     <link rel="manifest" href="/Courier_Web_Calculators/manifest.json">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 20px;
+        :root {
+            --primary-color: #4CAF50;
+            --button-color: #20c997;
+            --shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            --error-color: #dc3545;
+            --bg-light: #e9ecef;
+            --bg-dark: #212529;
+            --text-light: #333;
+            --text-dark: #fff;
+            --container-light: #fff;
+            --container-dark: #333;
+            --spacing-unit: 12px;
+            --font-size-base: 16px;
         }
-        .input-group {
-            margin: 10px 0;
+
+        body {
+            font-family: 'Roboto', 'Open Sans', sans-serif;
+            background: linear-gradient(135deg, var(--bg-light), #ced4da);
             display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: var(--spacing-unit);
+            color: var(--text-light);
+            transition: background 0.3s, color 0.3s;
+        }
+
+        body.dark {
+            background: linear-gradient(135deg, var(--bg-dark), #495057);
+            color: var(--text-dark);
+        }
+
+        main {
+            background-color: var(--container-light);
+            padding: calc(var(--spacing-unit) * 2);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            width: 90%;
+            max-width: 600px;
+            transition: background-color 0.3s;
+        }
+
+        :where(body.dark) main {
+            background-color: var(--container-dark);
+        }
+
+        h2 {
+            text-align: center;
+            color: #fff;
+            background-color: var(--primary-color);
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: calc(var(--spacing-unit) * 2);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: calc(var(--spacing-unit) * 2);
+            position: relative;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #555;
+        }
+
+        :where(body.dark) label {
+            color: #ccc;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: var(--font-size-base);
+            line-height: 1.5;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        :where(body.dark) input, :where(body.dark) select {
+            background-color: #555;
+            color: #fff;
+            border-color: #777;
+        }
+
+        input:hover, select:hover {
+            border-color: var(--primary-color);
+        }
+
+        input:focus, select:focus {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+            box-shadow: 0 0 8px rgba(0, 123, 255, 0.5);
+        }
+
+        .mode-group {
+            display: flex;
+            gap: var(--spacing-unit);
             align-items: center;
         }
-        label {
-            display: inline-block;
-            width: 120px;
+
+        .mode-input {
+            width: 80px;
         }
+
+        .buttons {
+            display: flex;
+            gap: var(--spacing-unit);
+            margin-top: calc(var(--spacing-unit) * 2);
+        }
+
         button {
-            margin: 10px 5px;
-            padding: 10px 20px;
-            background-color: #4CAF50;
+            width: 100%;
+            padding: var(--spacing-unit);
+            background-color: var(--button-color);
             color: white;
             border: none;
+            border-radius: 5px;
             cursor: pointer;
+            font-size: var(--font-size-base);
+            transition: all 0.3s ease;
         }
+
+        button:hover {
+            background-color: #1c7430;
+            transform: scale(1.02);
+            box-shadow: 0 4px 10px rgba ори0, 0, 0, 0.2);
+        }
+
+        button.reset {
+            background-color: #dc3545;
+        }
+
+        button.reset:hover {
+            background-color: #c82333;
+        }
+
+        #toggleMode {
+            background-color: #007bff;
+            margin-bottom: calc(var(--spacing-unit) * 2);
+        }
+
+        #toggleMode:hover {
+            background-color: #0056b3;
+        }
+
         #result {
-            margin-top: 20px;
+            margin-top: calc(var(--spacing-unit) * 2);
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
         }
+
+        :where(body.dark) #result {
+            background-color: #3a3a3a;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
+            margin-top: var(--spacing-unit);
         }
+
         th, td {
             border: 1px solid #ddd;
             padding: 8px;
             text-align: center;
         }
-        th {
-            background-color: #f2f2f2;
+
+        :where(body.dark) th, :where(body.dark) td {
+            border-color: #666;
         }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        :where(body.dark) th {
+            background-color: #555;
+        }
+
         .weight-column {
             white-space: nowrap;
-            width: 80px;
         }
+
         .total-row td {
             font-weight: bold;
         }
-        .mode-input {
-            width: 60px;
-            margin-left: 10px;
-        }
-        .note {
-            margin-top: 20px;
-            color: #888;
-            font-size: 0.8em;
-        }
+
         .delete-btn {
             background-color: #ff4444;
             padding: 5px 10px;
@@ -72,53 +215,89 @@
             color: white;
             border: none;
             cursor: pointer;
+            border-radius: 3px;
+            transition: background-color 0.3s;
+        }
+
+        .delete-btn:hover {
+            background-color: #cc0000;
+        }
+
+        .note {
+            margin-top: calc(var(--spacing-unit) * 2);
+            font-size: 12px;
+            color: #555;
+        }
+
+        :where(body.dark) .note {
+            color: #ccc;
+        }
+
+        @media (max-width: 768px) {
+            main { max-width: 80%; }
+            h2 { font-size: 20px; }
+            button { font-size: 14px; }
+            input, select { font-size: 14px; }
+        }
+
+        @media (max-width: 480px) {
+            main { padding: 15px; }
+            h2 { font-size: 18px; }
+            input, select, button { font-size: 14px; }
+            .buttons { flex-direction: column; }
+            .mode-group { flex-direction: column; align-items: flex-start; }
         }
     </style>
 </head>
 <body>
-    <h2>Volumetric Calculator</h2>
-    
-    <div class="input-group">
-        <label for="length">Length:</label>
-        <input type="number" id="length" min="0" step="0.1" required>
-    </div>
-    
-    <div class="input-group">
-        <label for="breadth">Breadth:</label>
-        <input type="number" id="breadth" min="0" step="0.1" required>
-    </div>
-    
-    <div class="input-group">
-        <label for="height">Height:</label>
-        <input type="number" id="height" min="0" step="0.1" required>
-    </div>
-    
-    <div class="input-group">
-        <label for="mode">Mode:</label>
-        <select id="mode" onchange="updateFactor()">
-            <option value="SF">SF</option>
-            <option value="AC">AC</option>
-            <option value="RD">RD</option>
-        </select>
-        <input type="number" id="factor" min="1" step="1" class="mode-input">
-    </div>
-    
-    <div class="input-group">
-        <label for="pieces">No of Pieces:</label>
-        <input type="number" id="pieces" min="1" value="1" required>
-    </div>
-    
-    <button onclick="addAndCalculate()">Add Box</button>
-    <button onclick="reset()">Reset</button>
-    
-    <div id="result"></div>
+    <main>
+        <h2>Volumetric Calculator</h2>
+        <button id="toggleMode" onclick="toggleMode()">Switch to Dark Mode</button>
 
-    <div class="note">
-        <strong>Note:</strong><br>
-        SF: (Length * Breadth * Height) / CFT<br>
-        AC: (Length * Breadth * Height) / CFT<br>
-        RD: ((Length * Breadth * Height) / 27000) * CFT
-    </div>
+        <div class="form-group">
+            <label for="length">Length:</label>
+            <input type="number" id="length" min="0" step="0.1" required>
+        </div>
+
+        <div class="form-group">
+            <label for="breadth">Breadth:</label>
+            <input type="number" id="breadth" min="0" step="0.1" required>
+        </div>
+
+        <div class="form-group">
+            <label for="height">Height:</label>
+            <input type="number" id="height" min="0" step="0.1" required>
+        </div>
+
+        <div class="form-group mode-group">
+            <label for="mode">Mode:</label>
+            <select id="mode" onchange="updateFactor()">
+                <option value="SF">SF</option>
+                <option value="AC">AC</option>
+                <option value="RD">RD</option>
+            </select>
+            <input type="number" id="factor" min="1" step="1" class="mode-input">
+        </div>
+
+        <div class="form-group">
+            <label for="pieces">No of Pieces:</label>
+            <input type="number" id="pieces" min="1" value="1" required>
+        </div>
+
+        <div class="buttons">
+            <button onclick="addAndCalculate()">Add Box</button>
+            <button class="reset" onclick="reset()">Reset</button>
+        </div>
+
+        <div id="result"></div>
+
+        <div class="note">
+            <strong>Note:</strong><br>
+            SF: (Length * Breadth * Height) / CFT<br>
+            AC: (Length * Breadth * Height) / CFT<br>
+            RD: ((Length * Breadth * Height) / 27000) * CFT
+        </div>
+    </main>
 
     <script>
         let boxes = [];
@@ -129,6 +308,12 @@
         };
 
         document.getElementById('factor').value = defaultFactors['SF'];
+
+        function toggleMode() {
+            document.body.classList.toggle('dark');
+            const button = document.getElementById('toggleMode');
+            button.textContent = document.body.classList.contains('dark') ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+        }
 
         function updateFactor() {
             const mode = document.getElementById('mode').value;
@@ -208,6 +393,11 @@
                 return;
             }
 
+            if (length <= 0 || breadth <= 0 || height <= 0 || pieces < 1 || factor < 1) {
+                alert('Values must be positive and pieces/factor must be at least 1');
+                return;
+            }
+
             boxes.push({
                 length: length,
                 breadth: breadth,
@@ -234,7 +424,6 @@
             document.getElementById('factor').value = defaultFactors['SF'];
         }
 
-        // Register the service worker for PWA functionality
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/Courier_Web_Calculators/sw.js')
