@@ -9,12 +9,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Volumetric Calculator</title>
     <link rel="manifest" href="/Courier_Web_Calculators/manifest.json">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary-color: #4CAF50;
             --button-color: #20c997;
             --shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             --error-color: #dc3545;
+            --success-color: #28a745;
             --bg-light: #e9ecef;
             --bg-dark: #212529;
             --text-light: #333;
@@ -49,7 +52,7 @@
             border-radius: 12px;
             box-shadow: var(--shadow);
             width: 90%;
-            max-width: 600px;
+            max-width: 800px;
             transition: background-color 0.3s;
         }
 
@@ -80,6 +83,7 @@
             font-size: 14px;
             line-height: 1.5;
             color: #555;
+            margin-bottom: 5px;
         }
 
         :where(body.dark) label {
@@ -95,6 +99,7 @@
             font-size: var(--font-size-base);
             line-height: 1.5;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
         }
 
         :where(body.dark) input, :where(body.dark) select {
@@ -113,6 +118,19 @@
             box-shadow: 0 0 8px rgba(0, 123, 255, 0.5);
         }
 
+        .input-group {
+            display: flex;
+            gap: var(--spacing-unit);
+        }
+
+        .input-group input {
+            flex: 1;
+        }
+
+        .input-group select {
+            width: 80px;
+        }
+
         .mode-group {
             display: flex;
             gap: var(--spacing-unit);
@@ -127,10 +145,10 @@
             display: flex;
             gap: var(--spacing-unit);
             margin-top: calc(var(--spacing-unit) * 2);
+            flex-wrap: wrap;
         }
 
         button {
-            width: 100%;
             padding: var(--spacing-unit);
             background-color: var(--button-color);
             color: white;
@@ -139,6 +157,12 @@
             cursor: pointer;
             font-size: var(--font-size-base);
             transition: all 0.3s ease;
+            flex: 1;
+            min-width: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         button:hover {
@@ -155,9 +179,26 @@
             background-color: #c82333;
         }
 
+        button.export {
+            background-color: #6f42c1;
+        }
+
+        button.export:hover {
+            background-color: #5a2d9c;
+        }
+
+        button.history {
+            background-color: #fd7e14;
+        }
+
+        button.history:hover {
+            background-color: #e36209;
+        }
+
         #toggleMode {
             background-color: #007bff;
             margin-bottom: calc(var(--spacing-unit) * 2);
+            width: 100%;
         }
 
         #toggleMode:hover {
@@ -165,8 +206,9 @@
         }
 
         #homeButton {
-            background-color: #6c757d; /* Gray color for Home button */
+            background-color: #6c757d;
             margin-top: calc(var(--spacing-unit) * 2);
+            width: 100%;
         }
 
         #homeButton:hover {
@@ -178,6 +220,7 @@
             padding: 15px;
             background-color: #e9ecef;
             border-radius: 5px;
+            transition: all 0.3s;
         }
 
         :where(body.dark) #result {
@@ -215,6 +258,11 @@
 
         .total-row td {
             font-weight: bold;
+            background-color: rgba(76, 175, 80, 0.1);
+        }
+
+        :where(body.dark) .total-row td {
+            background-color: rgba(76, 175, 80, 0.3);
         }
 
         .delete-btn {
@@ -236,46 +284,197 @@
             margin-top: calc(var(--spacing-unit) * 2);
             font-size: 12px;
             color: #555;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
         }
 
         :where(body.dark) .note {
             color: #ccc;
+            background-color: #3a3a3a;
+        }
+
+        .alert {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        :where(body.dark) .alert-error {
+            background-color: #3a1a1d;
+            color: #f8b3ba;
+            border-color: #5c2529;
+        }
+
+        :where(body.dark) .alert-success {
+            background-color: #1d3a24;
+            color: #b8e0c2;
+            border-color: #2a5c38;
+        }
+
+        .history-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .history-content {
+            background-color: var(--container-light);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        :where(body.dark) .history-content {
+            background-color: var(--container-dark);
+        }
+
+        .close-history {
+            float: right;
+            cursor: pointer;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 15px;
+        }
+
+        .tab-button {
+            padding: 10px 15px;
+            background-color: #ddd;
+            border: none;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+        }
+
+        .tab-button.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .formula-explanation {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e7f5ff;
+            border-radius: 5px;
+        }
+
+        :where(body.dark) .formula-explanation {
+            background-color: #1a3a4a;
         }
 
         @media (max-width: 768px) {
-            main { max-width: 80%; }
+            main { max-width: 90%; }
             h2 { font-size: 20px; }
             button { font-size: 14px; }
             input, select { font-size: 14px; }
+            .buttons { flex-direction: column; }
+            .input-group { flex-direction: column; }
+            .input-group select { width: 100%; }
         }
 
         @media (max-width: 480px) {
             main { padding: 15px; }
             h2 { font-size: 18px; }
-            input, select, button { font-size: 14px; }
-            .buttons { flex-direction: column; }
+            input, select, button { font-size: 14px; padding: 8px; }
             .mode-group { flex-direction: column; align-items: flex-start; }
+        }
+
+        /* Animation classes */
+        .fade-in {
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .shake {
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
         }
     </style>
 </head>
 <body>
     <main>
         <h2>Volumetric Calculator</h2>
-        <button id="toggleMode" onclick="toggleMode()">Switch to Dark Mode</button>
+        <button id="toggleMode" onclick="toggleMode()">
+            <span id="modeIcon">🌙</span> <span id="modeText">Switch to Dark Mode</span>
+        </button>
+
+        <div id="errorAlert" class="alert alert-error"></div>
+        <div id="successAlert" class="alert alert-success"></div>
+
+        <div class="form-group">
+            <label for="unit">Unit:</label>
+            <select id="unit" onchange="updateUnit()">
+                <option value="cm">Centimeters (cm)</option>
+                <option value="inch">Inches (in)</option>
+            </select>
+        </div>
 
         <div class="form-group">
             <label for="length">Length:</label>
-            <input type="number" id="length" min="0" step="0.1" required>
+            <div class="input-group">
+                <input type="number" id="length" min="0.1" step="0.1" required>
+                <span id="lengthUnit" class="unit-label">cm</span>
+            </div>
         </div>
 
         <div class="form-group">
             <label for="breadth">Breadth:</label>
-            <input type="number" id="breadth" min="0" step="0.1" required>
+            <div class="input-group">
+                <input type="number" id="breadth" min="0.1" step="0.1" required>
+                <span id="breadthUnit" class="unit-label">cm</span>
+            </div>
         </div>
 
         <div class="form-group">
             <label for="height">Height:</label>
-            <input type="number" id="height" min="0" step="0.1" required>
+            <div class="input-group">
+                <input type="number" id="height" min="0.1" step="0.1" required>
+                <span id="heightUnit" class="unit-label">cm</span>
+            </div>
         </div>
 
         <div class="form-group mode-group">
@@ -294,72 +493,302 @@
         </div>
 
         <div class="buttons">
-            <button onclick="addAndCalculate()">Add Box</button>
-            <button class="reset" onclick="reset()">Reset</button>
+            <button onclick="addAndCalculate()">➕ Add Box</button>
+            <button class="reset" onclick="reset()">🔄 Reset</button>
+            <button class="export" onclick="exportData()">📤 Export</button>
+            <button class="history" onclick="showHistory()">📜 History</button>
         </div>
 
         <div id="result"></div>
 
-        <div class="note">
-            <strong>Note:</strong><br>
-            SF: (Length * Breadth * Height) / CFT<br>
-            AC: (Length * Breadth * Height) / CFT<br>
-            RD: ((Length * Breadth * Height) / 27000) * CFT
+        <div class="formula-explanation">
+            <h4>Formula Explanation:</h4>
+            <div id="formulaText">
+                <strong>SF Mode:</strong> (Length × Breadth × Height in cm) / CFT Factor<br>
+                <strong>AC Mode:</strong> (Length × Breadth × Height in cm) / CFT Factor<br>
+                <strong>RD Mode:</strong> ((Length × Breadth × Height in cm) / 27000) × CFT Factor
+            </div>
         </div>
 
-        <button id="homeButton" onclick="window.location.href='index.html'">Back to Main Menu</button>
+        <div class="note">
+            <strong>Note:</strong><br>
+            - Default factors: SF=4750, AC=5000, RD=8<br>
+            - 1 inch = 2.54 cm (automatically converted)<br>
+            - Calculations are saved automatically
+        </div>
+
+        <button id="homeButton" onclick="window.location.href='index.html'">🏠 Back to Main Menu</button>
     </main>
 
+    <div id="historyModal" class="history-modal">
+        <div class="history-content">
+            <span class="close-history" onclick="closeHistory()">&times;</span>
+            <h3>Calculation History</h3>
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="openTab('todayTab')">Today</button>
+                <button class="tab-button" onclick="openTab('weekTab')">This Week</button>
+                <button class="tab-button" onclick="openTab('allTab')">All Time</button>
+            </div>
+            
+            <div id="todayTab" class="tab-content active">
+                <table id="todayHistory">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Dimensions</th>
+                            <th>Weight</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            
+            <div id="weekTab" class="tab-content">
+                <table id="weekHistory">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Dimensions</th>
+                            <th>Weight</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            
+            <div id="allTab" class="tab-content">
+                <table id="allHistory">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Dimensions</th>
+                            <th>Weight</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // Global variables
         let boxes = [];
         const defaultFactors = {
             'SF': 4750,
             'AC': 5000,
             'RD': 8
         };
-
-        document.getElementById('factor').value = defaultFactors['SF'];
-
+        const { jsPDF } = window.jspdf;
+        
+        // Initialize the calculator
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load saved data
+            loadData();
+            
+            // Set default factor
+            document.getElementById('factor').value = defaultFactors['SF'];
+            
+            // Check for dark mode preference
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.body.classList.add('dark');
+                updateModeButton();
+            }
+            
+            // Register service worker
+            registerServiceWorker();
+        });
+        
+        // Toggle dark/light mode
         function toggleMode() {
             document.body.classList.toggle('dark');
-            const button = document.getElementById('toggleMode');
-            button.textContent = document.body.classList.contains('dark') ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+            updateModeButton();
+            saveData();
         }
-
+        
+        function updateModeButton() {
+            const isDark = document.body.classList.contains('dark');
+            document.getElementById('modeIcon').textContent = isDark ? '☀️' : '🌙';
+            document.getElementById('modeText').textContent = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+        }
+        
+        // Update factor based on selected mode
         function updateFactor() {
             const mode = document.getElementById('mode').value;
             document.getElementById('factor').value = defaultFactors[mode];
+            updateFormulaExplanation();
         }
-
-        function calculateWeight(length, breadth, height, mode, pieces, factor) {
-            const baseVolume = length * breadth * height;
+        
+        // Update unit labels
+        function updateUnit() {
+            const unit = document.getElementById('unit').value;
+            const unitLabel = {
+                'cm': 'cm',
+                'inch': 'in'
+            }[unit];
+            
+            document.getElementById('lengthUnit').textContent = unitLabel;
+            document.getElementById('breadthUnit').textContent = unitLabel;
+            document.getElementById('heightUnit').textContent = unitLabel;
+        }
+        
+        // Update formula explanation based on mode
+        function updateFormulaExplanation() {
+            const mode = document.getElementById('mode').value;
+            const factor = document.getElementById('factor').value;
+            
+            let explanation = '';
+            if (mode === 'RD') {
+                explanation = `<strong>RD Mode:</strong> ((Length × Breadth × Height in cm) / 27000) × ${factor}`;
+            } else {
+                explanation = `<strong>${mode} Mode:</strong> (Length × Breadth × Height in cm) / ${factor}`;
+            }
+            
+            document.getElementById('formulaText').innerHTML = explanation;
+        }
+        
+        // Convert dimensions to cm for display
+        function getDisplayDimensions(box) {
+            if (box.unit === 'inch') {
+                return {
+                    length: (box.length * 2.54).toFixed(1),
+                    breadth: (box.breadth * 2.54).toFixed(1),
+                    height: (box.height * 2.54).toFixed(1)
+                };
+            }
+            return {
+                length: box.length,
+                breadth: box.breadth,
+                height: box.height
+            };
+        }
+        
+        // Calculate weight based on dimensions and mode
+        function calculateWeight(length, breadth, height, mode, pieces, factor, unit) {
+            // Convert to centimeters first
+            let convertedLength = unit === 'inch' ? length * 2.54 : length;
+            let convertedBreadth = unit === 'inch' ? breadth * 2.54 : breadth;
+            let convertedHeight = unit === 'inch' ? height * 2.54 : height;
+            
+            const baseVolume = convertedLength * convertedBreadth * convertedHeight;
             let weight;
-
+            
             if (mode === 'RD') {
                 weight = ((baseVolume / 27000) * factor) * pieces;
             } else {
                 weight = (baseVolume / factor) * pieces;
             }
+            
             return weight;
         }
-
+        
+        // Validate inputs
+        function validateInputs() {
+            const length = parseFloat(document.getElementById('length').value);
+            const breadth = parseFloat(document.getElementById('breadth').value);
+            const height = parseFloat(document.getElementById('height').value);
+            const pieces = parseInt(document.getElementById('pieces').value);
+            const factor = parseFloat(document.getElementById('factor').value);
+            
+            if (isNaN(length) || isNaN(breadth) || isNaN(height) || isNaN(pieces) || isNaN(factor)) {
+                showAlert('error', 'Please enter valid numbers in all fields');
+                return false;
+            }
+            
+            if (length <= 0 || breadth <= 0 || height <= 0) {
+                showAlert('error', 'Dimensions must be greater than zero');
+                return false;
+            }
+            
+            if (pieces < 1 || factor < 1) {
+                showAlert('error', 'Pieces and factor must be at least 1');
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Show alert message
+        function showAlert(type, message) {
+            const alertElement = type === 'error' ? 
+                document.getElementById('errorAlert') : 
+                document.getElementById('successAlert');
+            
+            alertElement.textContent = message;
+            alertElement.style.display = 'block';
+            
+            if (type === 'error') {
+                alertElement.classList.add('shake');
+            }
+            
+            setTimeout(() => {
+                alertElement.style.display = 'none';
+                alertElement.classList.remove('shake');
+            }, 5000);
+        }
+        
+        // Add box and calculate weight
+        function addAndCalculate() {
+            if (!validateInputs()) return;
+            
+            const length = parseFloat(document.getElementById('length').value);
+            const breadth = parseFloat(document.getElementById('breadth').value);
+            const height = parseFloat(document.getElementById('height').value);
+            const mode = document.getElementById('mode').value;
+            const pieces = parseInt(document.getElementById('pieces').value);
+            const factor = parseFloat(document.getElementById('factor').value);
+            const unit = document.getElementById('unit').value;
+            
+            const weight = calculateWeight(length, breadth, height, mode, pieces, factor, unit);
+            
+            const boxData = {
+                length: length,
+                breadth: breadth,
+                height: height,
+                unit: unit,
+                mode: mode,
+                pieces: pieces,
+                factor: factor,
+                weight: weight,
+                date: new Date().toISOString()
+            };
+            
+            boxes.push(boxData);
+            
+            // Clear input fields
+            document.getElementById('length').value = '';
+            document.getElementById('breadth').value = '';
+            document.getElementById('height').value = '';
+            document.getElementById('pieces').value = '1';
+            
+            showAlert('success', 'Box added successfully!');
+            updateDisplay();
+            saveData();
+        }
+        
+        // Delete box from list
         function deleteBox(index) {
             boxes.splice(index, 1);
             updateDisplay();
+            saveData();
+            showAlert('success', 'Box removed successfully!');
         }
-
+        
+        // Update the display with current boxes
         function updateDisplay() {
+            const resultDiv = document.getElementById('result');
+            
             if (boxes.length === 0) {
-                document.getElementById('result').innerHTML = '';
+                resultDiv.innerHTML = '';
                 return;
             }
-
+            
             let output = `
                 <table>
                     <thead>
                         <tr>
                             <th>S.No</th>
-                            <th>(L*B*H, Mode, CFT, Pcs)</th>
+                            <th>Dimensions (L×B×H, Mode, CFT, Pcs)</th>
                             <th>Weight</th>
                             <th>Delete</th>
                         </tr>
@@ -367,19 +796,19 @@
                     <tbody>`;
             
             let totalWeight = 0;
-
+            
             boxes.forEach((box, index) => {
-                const weight = calculateWeight(box.length, box.breadth, box.height, box.mode, box.pieces, box.factor);
-                totalWeight += weight;
+                totalWeight += box.weight;
+                const displayDims = getDisplayDimensions(box);
                 output += `
-                    <tr>
+                    <tr class="fade-in">
                         <td>${index + 1}</td>
-                        <td>(${box.length}*${box.breadth}*${box.height}, ${box.mode}, ${box.factor}, ${box.pieces}pcs)</td>
-                        <td class="weight-column">${weight.toFixed(3)} Kg</td>
-                        <td><button class="delete-btn" onclick="deleteBox(${index})">Delete</button></td>
+                        <td>(${displayDims.length}cm × ${displayDims.breadth}cm × ${displayDims.height}cm, ${box.mode}, ${box.factor}, ${box.pieces}pcs)</td>
+                        <td class="weight-column">${box.weight.toFixed(3)} Kg</td>
+                        <td><button class="delete-btn" onclick="deleteBox(${index})">❌ Delete</button></td>
                     </tr>`;
             });
-
+            
             output += `
                     <tr class="total-row">
                         <td colspan="2">Total Weight:</td>
@@ -388,55 +817,254 @@
                     </tr>
                 </tbody>
             </table>`;
-            document.getElementById('result').innerHTML = output;
+            
+            resultDiv.innerHTML = output;
         }
-
-        function addAndCalculate() {
-            const length = parseFloat(document.getElementById('length').value);
-            const breadth = parseFloat(document.getElementById('breadth').value);
-            const height = parseFloat(document.getElementById('height').value);
-            const mode = document.getElementById('mode').value;
-            const pieces = parseInt(document.getElementById('pieces').value);
-            const factor = parseFloat(document.getElementById('factor').value);
-
-            if (isNaN(length) || isNaN(breadth) || isNaN(height) || isNaN(pieces) || isNaN(factor)) {
-                alert('Please enter valid numbers');
-                return;
-            }
-
-            if (length <= 0 || breadth <= 0 || height <= 0 || pieces < 1 || factor < 1) {
-                alert('Values must be positive and pieces/factor must be at least 1');
-                return;
-            }
-
-            boxes.push({
-                length: length,
-                breadth: breadth,
-                height: height,
-                mode: mode,
-                pieces: pieces,
-                factor: factor
-            });
-
-            document.getElementById('length').value = '';
-            document.getElementById('breadth').value = '';
-            document.getElementById('height').value = '';
-
-            updateDisplay();
-        }
-
+        
+        // Reset the calculator
         function reset() {
-            boxes = [];
-            document.getElementById('result').innerHTML = '';
-            document.getElementById('length').value = '';
-            document.getElementById('breadth').value = '';
-            document.getElementById('height').value = '';
-            document.getElementById('pieces').value = '1';
-            document.getElementById('factor').value = defaultFactors['SF'];
+            if (boxes.length === 0) {
+                showAlert('error', 'No boxes to reset');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to reset all calculations?')) {
+                boxes = [];
+                updateDisplay();
+                saveData();
+                showAlert('success', 'All calculations have been reset');
+            }
         }
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
+        
+        // Export data to PDF or Excel
+        function exportData() {
+            if (boxes.length === 0) {
+                showAlert('error', 'No data to export');
+                return;
+            }
+            
+            const exportType = prompt('Export as: (1) PDF or (2) Excel', '1');
+            
+            if (exportType === '1') {
+                exportToPDF();
+            } else if (exportType === '2') {
+                exportToExcel();
+            }
+        }
+        
+        // Export to PDF
+        function exportToPDF() {
+            const doc = new jsPDF();
+            
+            // Add title
+            doc.setFontSize(18);
+            doc.text('Volumetric Weight Calculation', 105, 15, { align: 'center' });
+            
+            // Add date
+            doc.setFontSize(12);
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, 25, { align: 'center' });
+            
+            // Prepare table data
+            const headers = ["No", "Dimensions", "Mode", "Factor", "Pcs", "Weight (Kg)"];
+            const data = boxes.map((box, index) => {
+                const displayDims = getDisplayDimensions(box);
+                return [
+                    index + 1,
+                    `${displayDims.length}cm × ${displayDims.breadth}cm × ${displayDims.height}cm`,
+                    box.mode,
+                    box.factor,
+                    box.pieces,
+                    box.weight.toFixed(3)
+                ];
+            });
+            
+            // Add total row
+            const totalWeight = boxes.reduce((sum, box) => sum + box.weight, 0);
+            data.push(["", "", "", "", "Total:", totalWeight.toFixed(3)]);
+            
+            // Generate table
+            doc.autoTable({
+                head: [headers],
+                body: data,
+                startY: 30,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [76, 175, 80],
+                    textColor: 255
+                },
+                styles: {
+                    cellPadding: 5,
+                    fontSize: 10
+                },
+                columnStyles: {
+                    0: { cellWidth: 10 },
+                    1: { cellWidth: 50 },
+                    2: { cellWidth: 15 },
+                    3: { cellWidth: 20 },
+                    4: { cellWidth: 15 },
+                    5: { cellWidth: 25 }
+                }
+            });
+            
+            // Save the PDF
+            doc.save(`Volumetric_Calculation_${new Date().toISOString().slice(0,10)}.pdf`);
+            showAlert('success', 'PDF exported successfully!');
+        }
+        
+        // Export to Excel
+        function exportToExcel() {
+            // Prepare data
+            const data = [
+                ["No", "Length", "Breadth", "Height", "Unit", "Mode", "Factor", "Pieces", "Weight (Kg)"],
+                ...boxes.map((box, index) => {
+                    const displayDims = getDisplayDimensions(box);
+                    return [
+                        index + 1,
+                        displayDims.length,
+                        displayDims.breadth,
+                        displayDims.height,
+                        'cm', // Always show cm in export
+                        box.mode,
+                        box.factor,
+                        box.pieces,
+                        box.weight
+                    ];
+                })
+            ];
+            
+            // Add total row
+            const totalWeight = boxes.reduce((sum, box) => sum + box.weight, 0);
+            data.push(["", "", "", "", "", "", "", "Total:", totalWeight]);
+            
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            XLSX.utils.book_append_sheet(wb, ws, "Volumetric Calculation");
+            
+            // Save the file
+            XLSX.writeFile(wb, `Volumetric_Calculation_${new Date().toISOString().slice(0,10)}.xlsx`);
+            showAlert('success', 'Excel file exported successfully!');
+        }
+        
+        // Show calculation history
+        function showHistory() {
+            const today = new Date().toISOString().slice(0, 10);
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            
+            const todayData = boxes.filter(box => box.date.slice(0, 10) === today);
+            const weekData = boxes.filter(box => new Date(box.date) >= oneWeekAgo);
+            
+            populateHistoryTable('todayHistory', todayData);
+            populateHistoryTable('weekHistory', weekData);
+            populateHistoryTable('allHistory', boxes);
+            
+            document.getElementById('historyModal').style.display = 'flex';
+        }
+        
+        // Close history modal
+        function closeHistory() {
+            document.getElementById('historyModal').style.display = 'none';
+        }
+        
+        // Populate history table
+        function populateHistoryTable(tableId, data) {
+            const tableBody = document.querySelector(`#${tableId} tbody`);
+            tableBody.innerHTML = '';
+            
+            if (data.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="3">No data available</td></tr>';
+                return;
+            }
+            
+            data.forEach(box => {
+                const row = document.createElement('tr');
+                row.className = 'fade-in';
+                
+                const dateCell = document.createElement('td');
+                dateCell.textContent = new Date(box.date).toLocaleString();
+                
+                const dimCell = document.createElement('td');
+                const displayDims = getDisplayDimensions(box);
+                dimCell.textContent = `${displayDims.length}cm × ${displayDims.breadth}cm × ${displayDims.height}cm, ${box.mode}, ${box.factor}, ${box.pieces}pcs`;
+                
+                const weightCell = document.createElement('td');
+                weightCell.textContent = `${box.weight.toFixed(3)} Kg`;
+                
+                row.appendChild(dateCell);
+                row.appendChild(dimCell);
+                row.appendChild(weightCell);
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Open tab in history modal
+        function openTab(tabId) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show the selected tab and mark button as active
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+        
+        // Save data to localStorage
+        function saveData() {
+            const data = {
+                boxes: boxes,
+                darkMode: document.body.classList.contains('dark'),
+                mode: document.getElementById('mode').value,
+                factor: document.getElementById('factor').value,
+                unit: document.getElementById('unit').value
+            };
+            
+            localStorage.setItem('volumetricCalculatorData', JSON.stringify(data));
+        }
+        
+        // Load data from localStorage
+        function loadData() {
+            const savedData = localStorage.getItem('volumetricCalculatorData');
+            
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                
+                if (data.boxes && data.boxes.length > 0) {
+                    boxes = data.boxes;
+                    updateDisplay();
+                }
+                
+                if (data.darkMode) {
+                    document.body.classList.add('dark');
+                    updateModeButton();
+                }
+                
+                if (data.mode) {
+                    document.getElementById('mode').value = data.mode;
+                }
+                
+                if (data.factor) {
+                    document.getElementById('factor').value = data.factor;
+                }
+                
+                if (data.unit) {
+                    document.getElementById('unit').value = data.unit;
+                    updateUnit();
+                }
+                
+                updateFormulaExplanation();
+            }
+        }
+        
+        // Register service worker
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('/Courier_Web_Calculators/sw.js')
                     .then(registration => {
                         console.log('Service Worker registered with scope:', registration.scope);
@@ -444,7 +1072,7 @@
                     .catch(error => {
                         console.log('Service Worker registration failed:', error);
                     });
-            });
+            }
         }
     </script>
 </body>
