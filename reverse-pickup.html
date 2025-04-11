@@ -3,13 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#007bff">
+    <meta name="description" content="Calculate reverse pickup costs with detailed breakdown">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Reverse Pickup Cost Calculator</title>
+    <link rel="manifest" href="/Courier_Web_Calculators/manifest.json">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary-color: #007bff;
             --button-color: #20c997;
             --shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             --error-color: #dc3545;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
             --bg-light: #e9ecef;
             --bg-dark: #212529;
             --text-light: #333;
@@ -44,7 +53,7 @@
             border-radius: 12px;
             box-shadow: var(--shadow);
             width: 90%;
-            max-width: 600px;
+            max-width: 800px;
             transition: background-color 0.3s;
         }
 
@@ -96,31 +105,37 @@
             font-size: 14px;
             line-height: 1.5;
             color: #555;
+            margin-bottom: 5px;
         }
 
         :where(body.dark) label {
             color: #ccc;
         }
 
-        label span {
+        .tooltip {
             cursor: help;
             color: var(--primary-color);
             font-size: 12px;
             position: relative;
+            display: inline-block;
+            margin-left: 5px;
         }
 
-        label span:hover::after {
-            content: attr(title);
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
             position: absolute;
             background: #333;
             color: #fff;
-            padding: 5px;
-            border-radius: 3px;
+            padding: 8px;
+            border-radius: 4px;
             bottom: 100%;
             left: 50%;
             transform: translateX(-50%);
             z-index: 1;
             white-space: nowrap;
+            font-size: 12px;
+            min-width: 150px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
 
         input, select {
@@ -132,6 +147,7 @@
             font-size: var(--font-size-base);
             line-height: 1.5;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
         }
 
         :where(body.dark) input, :where(body.dark) select {
@@ -150,27 +166,46 @@
             box-shadow: 0 0 8px rgba(0, 123, 255, 0.5);
         }
 
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-unit);
+        }
+
+        .input-group input {
+            flex: 1;
+        }
+
+        .input-group .unit {
+            font-size: 14px;
+            color: #666;
+            white-space: nowrap;
+        }
+
+        :where(body.dark) .input-group .unit {
+            color: #aaa;
+        }
+
         .error {
             color: var(--error-color);
             font-size: 12px;
             margin-top: 5px;
             display: none;
-            transition: opacity 0.3s ease;
         }
 
         .error.show {
             display: block;
-            opacity: 1;
+            animation: fadeIn 0.3s;
         }
 
         .buttons {
             display: flex;
             gap: var(--spacing-unit);
             margin-top: calc(var(--spacing-unit) * 2);
+            flex-wrap: wrap;
         }
 
         button {
-            width: 100%;
             padding: var(--spacing-unit);
             background-color: var(--button-color);
             color: white;
@@ -179,6 +214,12 @@
             cursor: pointer;
             font-size: var(--font-size-base);
             transition: all 0.3s ease;
+            flex: 1;
+            min-width: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         button:hover {
@@ -195,9 +236,18 @@
             background-color: #c82333;
         }
 
+        button.export {
+            background-color: #6f42c1;
+        }
+
+        button.export:hover {
+            background-color: #5a2d9c;
+        }
+
         #toggleMode {
-            background-color: #007bff;
+            background-color: var(--primary-color);
             margin-bottom: calc(var(--spacing-unit) * 2);
+            width: 100%;
         }
 
         #toggleMode:hover {
@@ -205,8 +255,9 @@
         }
 
         #homeButton {
-            background-color: #6c757d; /* Gray color for Home button */
+            background-color: #6c757d;
             margin-top: calc(var(--spacing-unit) * 2);
+            width: 100%;
         }
 
         #homeButton:hover {
@@ -219,7 +270,7 @@
             background-color: #e9ecef;
             border-radius: 5px;
             display: none;
-            transition: opacity 0.3s;
+            transition: all 0.3s;
         }
 
         :where(body.dark) #result {
@@ -227,31 +278,33 @@
         }
 
         #result.fade-in {
-            animation: fadeIn 0.7s ease-in forwards;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            animation: fadeIn 0.7s;
         }
 
         #result h3 {
             margin-top: 0;
             color: var(--text-light);
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
         }
 
         :where(body.dark) #result h3 {
             color: var(--text-dark);
+            border-color: #555;
         }
 
         #result .note {
             font-size: 12px;
             color: #555;
             margin-bottom: var(--spacing-unit);
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
         }
 
         :where(body.dark) #result .note {
             color: #ccc;
+            background-color: #444;
         }
 
         table {
@@ -262,7 +315,7 @@
 
         th, td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 10px;
             text-align: left;
         }
 
@@ -284,6 +337,10 @@
             color: #3F7D58;
         }
 
+        :where(body.dark) .highlight {
+            color: #4CAF50;
+        }
+
         .spinner {
             border: 3px solid #f3f3f3;
             border-top: 3px solid var(--primary-color);
@@ -294,13 +351,49 @@
             margin: 0 auto;
         }
 
+        .alert {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        :where(body.dark) .alert-success {
+            background-color: #1d3a24;
+            color: #b8e0c2;
+            border-color: #2a5c38;
+        }
+
+        .alert-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        :where(body.dark) .alert-warning {
+            background-color: #3a3206;
+            color: #ffe8a1;
+            border-color: #5c4f0a;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
 
         @media (max-width: 768px) {
-            main { max-width: 80%; }
+            main { max-width: 90%; }
             h2 { font-size: 20px; }
             button { font-size: 14px; }
             input, select { font-size: 14px; }
@@ -309,31 +402,43 @@
         @media (max-width: 480px) {
             main { padding: 15px; }
             h2 { font-size: 18px; }
-            input, select, button { font-size: 14px; }
+            input, select, button { font-size: 14px; padding: 8px; }
             .buttons { flex-direction: column; }
         }
 
         @media print {
-            #toggleMode, .buttons, button { display: none; }
+            #toggleMode, #homeButton, button { display: none; }
             body { background: none; color: #000; }
-            main { box-shadow: none; }
+            main { box-shadow: none; max-width: 100%; }
+            #result { display: block !important; }
         }
     </style>
 </head>
 <body>
-    <main id="top">
+    <main>
         <h2>Reverse Pickup Cost Calculator</h2>
-        <button id="toggleMode" onclick="toggleMode()">Switch to Dark Mode</button>
+        <button id="toggleMode" onclick="toggleMode()">
+            <span id="modeIcon">🌙</span> <span id="modeText">Switch to Dark Mode</span>
+        </button>
+
+        <div id="successAlert" class="alert alert-success"></div>
+        <div id="warningAlert" class="alert alert-warning"></div>
+
         <form id="costForm">
             <fieldset>
                 <legend>Basic Charges</legend>
                 <div class="form-group">
-                    <label for="weight">Weight (in KG): <span title="Enter weight in kilograms">ℹ️</span></label>
-                    <input type="number" id="weight" value="0" min="0" aria-label="Weight in kilograms" required>
+                    <label for="weight">Weight
+                        <span class="tooltip" data-tooltip="Enter weight in kilograms">ℹ️</span>
+                    </label>
+                    <div class="input-group">
+                        <input type="number" id="weight" value="0" min="0" step="0.1" required>
+                        <span class="unit">KG</span>
+                    </div>
                     <div id="weightError" class="error"></div>
                 </div>
                 <div class="form-group">
-                    <label for="mode">Mode:</label>
+                    <label for="mode">Mode</label>
                     <select id="mode" required>
                         <option value="Surface">Surface</option>
                         <option value="Air Cargo">Air Cargo</option>
@@ -342,71 +447,123 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="rate">Rate (per KG): <span title="Cost per kilogram">ℹ️</span></label>
-                    <input type="number" id="rate" value="0" min="0" aria-label="Rate per kilogram" required>
+                    <label for="rate">Rate
+                        <span class="tooltip" data-tooltip="Cost per kilogram">ℹ️</span>
+                    </label>
+                    <div class="input-group">
+                        <input type="number" id="rate" value="0" min="0" step="0.01" required>
+                        <span class="unit">per KG</span>
+                    </div>
                     <div id="rateError" class="error"></div>
                 </div>
             </fieldset>
+
             <fieldset>
                 <legend>Additional Charges</legend>
                 <div class="form-group">
-                    <label for="docketCharge">Docket Charge: <span title="Fixed charge">ℹ️</span></label>
-                    <input type="number" id="docketCharge" value="100" min="0" aria-label="Docket charge" required>
+                    <label for="docketCharge">Docket Charge
+                        <span class="tooltip" data-tooltip="Fixed charge for documentation">ℹ️</span>
+                    </label>
+                    <div class="input-group">
+                        <input type="number" id="docketCharge" value="100" min="0" required>
+                        <span class="unit">₹</span>
+                    </div>
                     <div id="docketChargeError" class="error"></div>
                 </div>
                 <div class="form-group">
-                    <label for="materialInvoiceValue">Material Invoice Value: <span title="Value of goods">ℹ️</span></label>
-                    <input type="number" id="materialInvoiceValue" value="0" min="0" aria-label="Material invoice value" required>
+                    <label for="materialInvoiceValue">Material Invoice Value
+                        <span class="tooltip" data-tooltip="Declared value of goods">ℹ️</span>
+                    </label>
+                    <div class="input-group">
+                        <input type="number" id="materialInvoiceValue" value="0" min="0" required>
+                        <span class="unit">₹</span>
+                    </div>
                     <div id="materialInvoiceValueError" class="error"></div>
                 </div>
                 <div class="form-group">
-                    <label for="riskChargePercent">Risk Charge (%): <span title="Percentage for risk">ℹ️</span></label>
-                    <input type="number" step="0.01" id="riskChargePercent" value="0.20" min="0" aria-label="Risk charge percentage" required>
+                    <label for="riskChargePercent">Risk Charge
+                        <span class="tooltip" data-tooltip="Percentage for insurance/risk coverage">ℹ️</span>
+                    </label>
+                    <div class="input-group">
+                        <input type="number" step="0.01" id="riskChargePercent" value="0.20" min="0" required>
+                        <span class="unit">%</span>
+                    </div>
                     <div id="riskChargePercentError" class="error"></div>
                 </div>
                 <div class="form-group">
-                    <label for="handling">Handling Charge: <span title="Extra handling cost">ℹ️</span></label>
-                    <input type="number" id="handling" value="0" min="0" aria-label="Handling charge">
+                    <label for="handling">Handling Charge
+                        <span class="tooltip" data-tooltip="Extra handling cost if applicable">ℹ️</span>
+                    </label>
+                    <div class="input-group">
+                        <input type="number" id="handling" value="0" min="0">
+                        <span class="unit">₹</span>
+                    </div>
                     <div id="handlingError" class="error"></div>
                 </div>
                 <div class="form-group">
-                    <label for="oda">ODA Charge: <span title="Out of Delivery Area charge">ℹ️</span></label>
-                    <input type="number" id="oda" value="0" min="0" aria-label="ODA charge" required>
+                    <label for="oda">ODA Charge
+                        <span class="tooltip" data-tooltip="Out of Delivery Area charge">ℹ️</span>
+                    </label>
+                    <div class="input-group">
+                        <input type="number" id="oda" value="0" min="0" required>
+                        <span class="unit">₹</span>
+                    </div>
                     <div id="odaError" class="error"></div>
                 </div>
             </fieldset>
+
             <fieldset>
                 <legend>Fuel Surcharge</legend>
                 <div class="form-group">
-                    <label for="fuel">Fuel Percentage (%): <span title="Fuel surcharge">ℹ️</span></label>
-                    <input type="number" id="fuel" value="0" min="0" aria-label="Fuel percentage" required>
+                    <label for="fuel">Fuel Percentage
+                        <span class="tooltip" data-tooltip="Current fuel surcharge percentage">ℹ️</span>
+                    </label>
+                    <div class="input-group">
+                        <input type="number" id="fuel" value="0" min="0" step="0.01" required>
+                        <span class="unit">%</span>
+                    </div>
                     <div id="fuelError" class="error"></div>
                 </div>
                 <div class="form-group">
                     <label for="fuelOnRateOnly">
-                        <input type="checkbox" id="fuelOnRateOnly" aria-label="Calculate fuel charge on rate cost only">
+                        <input type="checkbox" id="fuelOnRateOnly">
                         Calculate Fuel Charge on Rate Cost Only
-                        <span title="If checked, fuel charge will be calculated only on Rate Cost, and other charges will be added later">ℹ️</span>
+                        <span class="tooltip" data-tooltip="If checked, fuel charge will be calculated only on Rate Cost, and other charges will be added later">ℹ️</span>
                     </label>
                 </div>
             </fieldset>
+
             <fieldset>
                 <legend>Tax</legend>
                 <div class="form-group">
-                    <label for="gst">GST Percentage (%): <span title="Tax percentage">ℹ️</span></label>
-                    <input type="number" id="gst" value="18" min="0" aria-label="GST percentage" required>
+                    <label for="gst">GST Percentage
+                        <span class="tooltip" data-tooltip="Applicable GST rate">ℹ️</span>
+                    </label>
+                    <div class="input-group">
+                        <input type="number" id="gst" value="18" min="0" step="0.01" required>
+                        <span class="unit">%</span>
+                    </div>
                     <div id="gstError" class="error"></div>
                 </div>
             </fieldset>
+
             <div class="buttons">
-                <button type="button" onclick="calculateCost()">Calculate Cost</button>
-                <button type="button" class="reset" onclick="resetForm()">Reset</button>
+                <button type="button" onclick="calculateCost()">💲 Calculate Cost</button>
+                <button type="button" class="reset" onclick="resetForm()">🔄 Reset</button>
+                <button type="button" class="export" onclick="exportData()">📤 Export</button>
             </div>
         </form>
+
         <div id="result"></div>
-        <button id="homeButton" onclick="window.location.href='index.html'">Back to Main Menu</button>
+        <button id="homeButton" onclick="window.location.href='index.html'">🏠 Back to Main Menu</button>
     </main>
+
     <script>
+        // Global variables
+        const { jsPDF } = window.jspdf;
+        let currentCalculation = null;
+        
+        // Initialize formatter for Indian Rupees
         const formatter = new Intl.NumberFormat('en-IN', {
             style: 'currency',
             currency: 'INR',
@@ -414,58 +571,121 @@
             maximumFractionDigits: 2
         });
 
+        // Initialize the calculator
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for dark mode preference
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.body.classList.add('dark');
+                updateModeButton();
+            }
+            
+            // Register service worker
+            registerServiceWorker();
+        });
+
+        // Get input value with validation
         function getInputValue(id) {
-            const value = document.getElementById(id).value;
-            return value === "" ? 0 : parseFloat(value);
+            const element = document.getElementById(id);
+            const value = parseFloat(element.value);
+            return isNaN(value) ? 0 : value;
         }
 
+        // Show error message
         function showError(id, message) {
             const errorElement = document.getElementById(id + 'Error');
             errorElement.textContent = message;
             errorElement.classList.add('show');
+            document.getElementById(id).classList.add('error-highlight');
             return false;
         }
 
+        // Hide error message
         function hideError(id) {
-            document.getElementById(id + 'Error').classList.remove('show');
+            const errorElement = document.getElementById(id + 'Error');
+            errorElement.classList.remove('show');
+            document.getElementById(id).classList.remove('error-highlight');
             return true;
         }
 
+        // Validate input field
         function validateInput(id, message) {
             const value = getInputValue(id);
             return value < 0 ? showError(id, message) : hideError(id);
         }
 
+        // Toggle dark/light mode
         function toggleMode() {
             document.body.classList.toggle('dark');
-            const button = document.getElementById('toggleMode');
-            button.textContent = document.body.classList.contains('dark') ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+            updateModeButton();
         }
 
-        function calculateCharges({ weight, rate, riskChargePercent, materialInvoiceValue, docketCharge, handling, oda, fuelPercent, gstPercent, fuelOnRateOnly }) {
-            const rateCost = weight * rate;
-            const riskChargeCalc = (materialInvoiceValue * riskChargePercent) / 100;
-            const riskCharge = riskChargePercent === 0 ? 0 : Math.max(riskChargeCalc, 100);
+        // Update mode button text
+        function updateModeButton() {
+            const isDark = document.body.classList.contains('dark');
+            document.getElementById('modeIcon').textContent = isDark ? '☀️' : '🌙';
+            document.getElementById('modeText').textContent = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+        }
 
-            const fuelBase = fuelOnRateOnly ? rateCost : (rateCost + docketCharge + riskCharge + handling + oda);
-            const fuelCharge = (fuelBase * fuelPercent) / 100;
+        // Show alert message
+        function showAlert(type, message) {
+            const alertElement = type === 'success' ? 
+                document.getElementById('successAlert') : 
+                document.getElementById('warningAlert');
+            
+            alertElement.textContent = message;
+            alertElement.style.display = 'block';
+            
+            setTimeout(() => {
+                alertElement.style.display = 'none';
+            }, 5000);
+        }
 
-            const taxableValue = fuelOnRateOnly ? (rateCost + fuelCharge + docketCharge + riskCharge + handling + oda) : (fuelBase + fuelCharge);
-            const gst = (taxableValue * gstPercent) / 100;
+        // Calculate all charges
+        function calculateCharges(inputs) {
+            const rateCost = inputs.weight * inputs.rate;
+            const riskChargeCalc = (inputs.materialInvoiceValue * inputs.riskChargePercent) / 100;
+            const riskCharge = inputs.riskChargePercent === 0 ? 0 : Math.max(riskChargeCalc, 100);
+
+            const fuelBase = inputs.fuelOnRateOnly ? rateCost : 
+                (rateCost + inputs.docketCharge + riskCharge + inputs.handling + inputs.oda);
+            const fuelCharge = (fuelBase * inputs.fuelPercent) / 100;
+
+            const taxableValue = inputs.fuelOnRateOnly ? 
+                (rateCost + fuelCharge + inputs.docketCharge + riskCharge + inputs.handling + inputs.oda) : 
+                (fuelBase + fuelCharge);
+            
+            const gst = (taxableValue * inputs.gstPercent) / 100;
             const grandTotalBeforeRound = taxableValue + gst;
             const roundValue = Math.round(grandTotalBeforeRound) - grandTotalBeforeRound;
             const grandTotal = grandTotalBeforeRound + roundValue;
 
-            return { rateCost, riskCharge, fuelCharge, taxableValue, gst, roundValue, grandTotal };
+            return { 
+                rateCost, 
+                riskCharge, 
+                fuelCharge, 
+                taxableValue, 
+                gst, 
+                roundValue, 
+                grandTotal,
+                inputs
+            };
         }
 
+        // Create table row
         function createRow(description, value) {
             const tr = document.createElement('tr');
             tr.innerHTML = `<td>${description}</td><td>${value}</td>`;
             return tr;
         }
 
+        // Format percentage
+        function formatPercent(value) {
+            return `${value}%`;
+        }
+
+        // Calculate and display cost
         function calculateCost() {
+            // Get all input values
             const inputs = {
                 weight: getInputValue('weight'),
                 mode: document.getElementById('mode').value,
@@ -480,9 +700,11 @@
                 fuelOnRateOnly: document.getElementById('fuelOnRateOnly').checked
             };
 
-            if (inputs.weight === 0) return showError('weight', 'Weight must be greater than 0');
-            if (inputs.rate === 0) return showError('rate', 'Rate must be greater than 0');
+            // Validate required fields
+            if (inputs.weight <= 0) return showError('weight', 'Weight must be greater than 0');
+            if (inputs.rate <= 0) return showError('rate', 'Rate must be greater than 0');
 
+            // Validate all inputs
             const validations = [
                 validateInput('weight', 'Weight cannot be negative'),
                 validateInput('rate', 'Rate cannot be negative'),
@@ -497,44 +719,72 @@
 
             if (!validations.every(v => v)) return;
 
+            // Show loading spinner
             const resultDiv = document.getElementById('result');
             resultDiv.innerHTML = '<div class="spinner"></div>';
             resultDiv.style.display = 'block';
 
+            // Calculate after short delay for better UX
             setTimeout(() => {
-                const { rateCost, riskCharge, fuelCharge, taxableValue, gst, roundValue, grandTotal } = calculateCharges(inputs);
+                // Perform calculations
+                const charges = calculateCharges(inputs);
+                currentCalculation = charges; // Store for export
+                
+                // Create result elements
                 const fragment = document.createDocumentFragment();
+                
+                // Add title
                 fragment.appendChild(document.createElement('h3')).textContent = 'Cost Breakdown';
-                fragment.appendChild(document.createElement('div')).innerHTML = 
-                    `Note: Risk Charge is calculated as ${inputs.riskChargePercent}% of Material Invoice Value or a minimum of ₹100.`;
-                fragment.lastChild.className = 'note';
-
+                
+                // Add note about risk charge
+                const note = document.createElement('div');
+                note.className = 'note';
+                note.innerHTML = `Note: Risk Charge is calculated as ${formatPercent(inputs.riskChargePercent)} of Material Invoice Value or a minimum of ₹100, whichever is higher.`;
+                fragment.appendChild(note);
+                
+                // Create table
                 const table = document.createElement('table');
                 const tbody = document.createElement('tbody');
+                
+                // Add table header
                 table.appendChild(document.createElement('thead')).innerHTML = '<tr><th>Description</th><th>Value</th></tr>';
+                
+                // Add all calculation rows
                 tbody.appendChild(createRow('Weight', `${inputs.weight} KG`));
                 tbody.appendChild(createRow('Mode', inputs.mode));
-                tbody.appendChild(createRow(`Rate Charge (${inputs.rate} per KG)`, formatter.format(rateCost)));
+                tbody.appendChild(createRow(`Rate Charge (${formatter.format(inputs.rate)} per KG)`, formatter.format(charges.rateCost)));
                 tbody.appendChild(createRow('Docket Charge', formatter.format(inputs.docketCharge)));
-                tbody.appendChild(createRow(`Risk Charge (${inputs.riskChargePercent}%)`, formatter.format(riskCharge)));
+                tbody.appendChild(createRow(`Risk Charge (${formatPercent(inputs.riskChargePercent)})`, formatter.format(charges.riskCharge)));
                 tbody.appendChild(createRow('Handling Charge', formatter.format(inputs.handling)));
                 tbody.appendChild(createRow('ODA Charge', formatter.format(inputs.oda)));
-                tbody.appendChild(createRow(`Fuel Charge (${inputs.fuelPercent}%)`, formatter.format(fuelCharge)));
-                tbody.appendChild(createRow('Taxable Value', formatter.format(taxableValue)));
-                tbody.appendChild(createRow('GST', formatter.format(gst)));
-                tbody.appendChild(createRow('Round Value', formatter.format(roundValue)));
-                const totalRow = createRow('Grand Total', formatter.format(grandTotal));
+                tbody.appendChild(createRow(`Fuel Charge (${formatPercent(inputs.fuelPercent)})`, formatter.format(charges.fuelCharge)));
+                tbody.appendChild(createRow('Taxable Value', formatter.format(charges.taxableValue)));
+                tbody.appendChild(createRow(`GST (${formatPercent(inputs.gstPercent)})`, formatter.format(charges.gst)));
+                tbody.appendChild(createRow('Round Value', formatter.format(charges.roundValue)));
+                
+                // Add total row with highlight
+                const totalRow = createRow('Grand Total', formatter.format(charges.grandTotal));
                 totalRow.className = 'highlight';
                 tbody.appendChild(totalRow);
+                
+                // Complete table structure
                 table.appendChild(tbody);
                 fragment.appendChild(table);
-
+                
+                // Update result display
                 resultDiv.innerHTML = '';
                 resultDiv.appendChild(fragment);
                 resultDiv.classList.add('fade-in');
+                
+                // Show success message
+                showAlert('success', 'Calculation completed successfully!');
+                
+                // Scroll to result
+                resultDiv.scrollIntoView({ behavior: 'smooth' });
             }, 500);
         }
 
+        // Reset form to default values
         function resetForm() {
             document.getElementById('costForm').reset();
             document.getElementById('weight').value = '0';
@@ -547,7 +797,150 @@
             document.getElementById('fuel').value = '0';
             document.getElementById('gst').value = '18';
             document.getElementById('result').style.display = 'none';
-            ['weight', 'rate', 'docketCharge', 'materialInvoiceValue', 'riskChargePercent', 'handling', 'oda', 'fuel', 'gst'].forEach(hideError);
+            
+            // Clear all errors
+            ['weight', 'rate', 'docketCharge', 'materialInvoiceValue', 'riskChargePercent', 
+             'handling', 'oda', 'fuel', 'gst'].forEach(hideError);
+        }
+
+        // Export data to PDF or Excel
+        function exportData() {
+            if (!currentCalculation) {
+                showAlert('warning', 'No calculation data to export. Please calculate first.');
+                return;
+            }
+
+            const exportType = prompt('Export as: (1) PDF or (2) Excel', '1');
+            
+            if (exportType === '1') {
+                exportToPDF();
+            } else if (exportType === '2') {
+                exportToExcel();
+            }
+        }
+
+        // Export to PDF
+        function exportToPDF() {
+            const doc = new jsPDF();
+            const { inputs, rateCost, riskCharge, fuelCharge, taxableValue, gst, roundValue, grandTotal } = currentCalculation;
+            
+            // Add title
+            doc.setFontSize(18);
+            doc.text('Reverse Pickup Cost Calculation', 105, 15, { align: 'center' });
+            
+            // Add date
+            doc.setFontSize(12);
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, 25, { align: 'center' });
+            
+            // Add basic info
+            doc.setFontSize(14);
+            doc.text(`Mode: ${inputs.mode}`, 14, 40);
+            doc.text(`Weight: ${inputs.weight} KG`, 14, 50);
+            
+            // Prepare table data
+            const headers = ["Description", "Value"];
+            const data = [
+                [`Rate Charge (${formatter.format(inputs.rate)} per KG)`, formatter.format(rateCost)],
+                ['Docket Charge', formatter.format(inputs.docketCharge)],
+                [`Risk Charge (${formatPercent(inputs.riskChargePercent)})`, formatter.format(riskCharge)],
+                ['Handling Charge', formatter.format(inputs.handling)],
+                ['ODA Charge', formatter.format(inputs.oda)],
+                [`Fuel Charge (${formatPercent(inputs.fuelPercent)})`, formatter.format(fuelCharge)],
+                ['Taxable Value', formatter.format(taxableValue)],
+                [`GST (${formatPercent(inputs.gstPercent)})`, formatter.format(gst)],
+                ['Round Value', formatter.format(roundValue)],
+                ['GRAND TOTAL', formatter.format(grandTotal)]
+            ];
+            
+            // Generate table
+            doc.autoTable({
+                head: [headers],
+                body: data,
+                startY: 60,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [0, 123, 255],
+                    textColor: 255
+                },
+                styles: {
+                    cellPadding: 5,
+                    fontSize: 10
+                },
+                columnStyles: {
+                    0: { cellWidth: 70 },
+                    1: { cellWidth: 40 }
+                },
+                didDrawCell: (data) => {
+                    if (data.row.index === data.table.rows.length - 1) {
+                        doc.setFontStyle('bold');
+                        doc.setTextColor(63, 125, 88);
+                    }
+                }
+            });
+            
+            // Add note
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Note: Risk Charge is calculated as ${formatPercent(inputs.riskChargePercent)} of Material Invoice Value or a minimum of ₹100`, 14, doc.lastAutoTable.finalY + 10);
+            
+            // Save the PDF
+            doc.save(`Reverse_Pickup_Cost_${new Date().toISOString().slice(0,10)}.pdf`);
+            showAlert('success', 'PDF exported successfully!');
+        }
+
+        // Export to Excel
+        function exportToExcel() {
+            const { inputs, rateCost, riskCharge, fuelCharge, taxableValue, gst, roundValue, grandTotal } = currentCalculation;
+            
+            // Prepare data
+            const data = [
+                ["Reverse Pickup Cost Calculation", ""],
+                ["Generated on:", new Date().toLocaleString()],
+                ["Mode:", inputs.mode],
+                ["Weight:", `${inputs.weight} KG`],
+                ["", ""],
+                ["Description", "Value"],
+                [`Rate Charge (${formatter.format(inputs.rate)} per KG)`, rateCost],
+                ['Docket Charge', inputs.docketCharge],
+                [`Risk Charge (${formatPercent(inputs.riskChargePercent)})`, riskCharge],
+                ['Handling Charge', inputs.handling],
+                ['ODA Charge', inputs.oda],
+                [`Fuel Charge (${formatPercent(inputs.fuelPercent)})`, fuelCharge],
+                ['Taxable Value', taxableValue],
+                [`GST (${formatPercent(inputs.gstPercent)})`, gst],
+                ['Round Value', roundValue],
+                ['GRAND TOTAL', grandTotal],
+                ["", ""],
+                [`Note: Risk Charge is calculated as ${formatPercent(inputs.riskChargePercent)} of Material Invoice Value or a minimum of ₹100`, ""]
+            ];
+            
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            
+            // Format the grand total row
+            ws['A' + (data.length - 3)].s = { font: { bold: true }, fill: { fgColor: { rgb: "E6FFED" } } };
+            ws['B' + (data.length - 3)].s = { font: { bold: true }, fill: { fgColor: { rgb: "E6FFED" } } };
+            
+            // Add worksheet to workbook
+            XLSX.utils.book_append_sheet(wb, ws, "Cost Calculation");
+            
+            // Save the file
+            XLSX.writeFile(wb, `Reverse_Pickup_Cost_${new Date().toISOString().slice(0,10)}.xlsx`);
+            showAlert('success', 'Excel file exported successfully!');
+        }
+
+        // Register service worker for PWA
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/Courier_Web_Calculators/sw.js')
+                    .then(registration => {
+                        console.log('Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            }
         }
     </script>
 </body>
