@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Courier Rate Finder</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        .container {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 28px;
+            position: relative;
+            padding-bottom: 10px;
+        }
+        h1:after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 3px;
+            background: linear-gradient(to right, #3498db, #2ecc71);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #34495e;
+        }
+        select, input[type="number"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background-color: #f8f9fa;
+        }
+        select:focus, input[type="number"]:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+            outline: none;
+            background-color: #fff;
+        }
+        button {
+            background: linear-gradient(to right, #2ecc71, #3498db);
+            color: #fff;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        #result {
+            margin-top: 25px;
+            padding: 15px 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background-color: #f8f9fa;
+            display: none;
+            animation: fadeIn 0.5s;
+            border-left: 4px solid #3498db;
+        }
+        .rate-display {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .details {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #ddd;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .info-icon {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            background-color: #3498db;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 18px;
+            font-size: 12px;
+            margin-left: 5px;
+            cursor: help;
+            position: relative;
+        }
+        .info-icon:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            margin-left: 10px;
+            width: 200px;
+            padding: 8px 12px;
+            background-color: #2c3e50;
+            color: #fff;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: normal;
+            z-index: 10;
+            white-space: normal;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Courier Rate Calculator</h1>
+        <div class="form-group">
+            <label for="zone">Destination Zone</label>
+            <select id="zone">
+                <option value="COIMBATORE">COIMBATORE</option>
+                <option value="TN">Tamil Nadu (TN)</option>
+                <option value="KL/KA">Kerala/Karnataka (KL/KA)</option>
+                <option value="AP">Andhra Pradesh (AP)</option>
+                <option value="METRO">Metro Cities</option>
+                <option value="ROI">Rest of India (ROI)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="mode">Service Mode</label>
+            <select id="mode">
+                <option value="EXP">Express (EXP)</option>
+                <option value="SF">Surface (SF)</option>
+                <option value="AC">Air Cargo (AC)</option>
+                <option value="PEP">Priority Express (PEP)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="weight">Package Weight (Kg)</label>
+            <input type="number" id="weight" step="0.001" min="0.001" placeholder="Enter weight in kilograms" value="1.000">
+        </div>
+        <button onclick="calculateRate()">Calculate Shipping Rate</button>
+        <div id="result"></div>
+    </div>
+
+<script>
+    function calculateRate() {
+        const zone = document.getElementById('zone').value;
+        const mode = document.getElementById('mode').value;
+        const weight = parseFloat(document.getElementById('weight').value);
+        const resultDiv = document.getElementById('result');
+        
+        // Validate input
+        if (!weight || weight <= 0) {
+            showResult('Please enter a valid weight greater than 0 Kg', 'error');
+            return;
+        }
+
+        // Rate calculation logic
+        let rate = 0;
+        let details = '';
+        let tooltip = '';
+        
+        try {
+            if (mode === 'EXP') {
+                if (weight <= 0.1) {
+                    const rates = { 'COIMBATORE': 40, 'TN': 80, 'KL/KA': 90, 'AP': 120, 'METRO': 120, 'ROI': 150 };
+                    rate = rates[zone];
+                    details = `First 0.1 Kg rate: ₹${rate}`;
+                } else if (weight <= 0.5) {
+                    const rates = { 'COIMBATORE': 60, 'TN': 90, 'KL/KA': 120, 'AP': 140, 'METRO': 140, 'ROI': 250 };
+                    rate = rates[zone];
+                    details = `0.1-0.5 Kg rate: ₹${rate}`;
+                } else {
+                    const rates = { 'COIMBATORE': 70, 'TN': 95, 'KL/KA': 130, 'AP': 150, 'METRO': 150, 'ROI': 300 };
+                    rate = rates[zone] * Math.ceil(weight);
+                    details = `Per Kg rate: ₹${rates[zone]} × ${Math.ceil(weight)} Kg`;
+                }
+                tooltip = "EXPRESS: Rates vary by weight slab. Above 0.5 Kg, charges apply per full Kg.";
+            } 
+            else if (mode === 'SF') {
+                const rates = { 'COIMBATORE': 70, 'TN': 95, 'KL/KA': 130, 'AP': 150, 'METRO': 150, 'ROI': 160 };
+                const minCharge = { 'COIMBATORE': 0, 'TN': 0, 'KL/KA': 0, 'AP': 0, 'METRO': 450, 'ROI': 480 };
+                
+                if (minCharge[zone] > 0 && weight < 3) {
+                    rate = minCharge[zone];
+                    details = `Minimum charge for 3 Kg: ₹${rate}`;
+                } else {
+                    rate = rates[zone] * Math.ceil(weight);
+                    details = `Per Kg rate: ₹${rates[zone]} × ${Math.ceil(weight)} Kg`;
+                }
+                tooltip = "SURFACE: Minimum 3 Kg charge applies for METRO (₹450) and ROI (₹480). Otherwise per Kg rate.";
+            } 
+            else if (mode === 'AC') {
+                const rates = { 'COIMBATORE': 0, 'TN': 0, 'KL/KA': 0, 'AP': 150, 'METRO': 300, 'ROI': 300 };
+                
+                if (rates[zone] === 0) {
+                    showResult('Air Cargo service not available for selected zone', 'error');
+                    return;
+                }
+                
+                rate = rates[zone] * Math.ceil(weight);
+                details = `Per Kg rate: ₹${rates[zone]} × ${Math.ceil(weight)} Kg`;
+                tooltip = "AIR CARGO: Available only for AP, METRO and ROI zones.";
+            } 
+            else if (mode === 'PEP') {
+                if (weight <= 0.5) {
+                    const rates = { 'COIMBATORE': 240, 'TN': 240, 'KL/KA': 325, 'AP': 325, 'METRO': 350, 'ROI': 400 };
+                    rate = rates[zone];
+                    details = `First 0.5 Kg rate: ₹${rate}`;
+                } else if (weight <= 10) {
+                    const baseRates = { 'COIMBATORE': 240, 'TN': 240, 'KL/KA': 325, 'AP': 325, 'METRO': 350, 'ROI': 400 };
+                    const additionalRates = { 'COIMBATORE': 95, 'TN': 95, 'KL/KA': 140, 'AP': 140, 'METRO': 225, 'ROI': 255 };
+                    const additionalWeight = Math.ceil((weight - 0.5) / 0.5);
+                    rate = baseRates[zone] + (additionalWeight * additionalRates[zone]);
+                    details = `Base 0.5 Kg: ₹${baseRates[zone]} + ${additionalWeight} × 0.5 Kg (₹${additionalRates[zone]} each)`;
+                } else {
+                    const rates = { 'COIMBATORE': 145, 'TN': 145, 'KL/KA': 220, 'AP': 220, 'METRO': 350, 'ROI': 400 };
+                    rate = baseRates[zone] + (19 * additionalRates[zone]) + (rates[zone] * Math.floor(weight - 10));
+                    details = `Base 10 Kg rate + Additional ${Math.floor(weight - 10)} Kg @ ₹${rates[zone]}/Kg`;
+                }
+                tooltip = "PRIORITY EXPRESS: 0-0.5 Kg flat rate, 0.5-10 Kg in 0.5 Kg increments, above 10 Kg per Kg rate.";
+            }
+            
+            showResult(`<div class="rate-display">₹${rate.toFixed(2)}</div>
+                       <div>For ${weight} Kg to ${zone} via ${getModeName(mode)}</div>
+                       <div class="details">${details}</div>`);
+            
+            // Add tooltip icon if available
+            if (tooltip) {
+                const tooltipIcon = document.createElement('span');
+                tooltipIcon.className = 'info-icon';
+                tooltipIcon.setAttribute('data-tooltip', tooltip);
+                tooltipIcon.textContent = 'i';
+                resultDiv.querySelector('.rate-display').appendChild(tooltipIcon);
+            }
+            
+        } catch (error) {
+            showResult('Error calculating rate. Please check your inputs.', 'error');
+            console.error(error);
+        }
+    }
+    
+    function showResult(message, type = 'success') {
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = message;
+        resultDiv.style.display = 'block';
+        resultDiv.style.borderLeftColor = type === 'error' ? '#e74c3c' : '#2ecc71';
+    }
+    
+    function getModeName(mode) {
+        const modes = {
+            'EXP': 'Express',
+            'SF': 'Surface',
+            'AC': 'Air Cargo',
+            'PEP': 'Priority Express'
+        };
+        return modes[mode] || mode;
+    }
+    
+    // Initialize with default calculation
+    window.onload = function() {
+        calculateRate();
+    };
+</script>
+</body>
+</html>
