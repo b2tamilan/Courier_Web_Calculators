@@ -245,20 +245,24 @@
                 tooltip = "AIR CARGO: Available only for AP, METRO and ROI zones.";
             } 
             else if (mode === 'PEP') {
+                const baseRates = { 'COIMBATORE': 240, 'TN': 240, 'KL/KA': 325, 'AP': 325, 'METRO': 350, 'ROI': 400 };
+                const additionalRates = { 'COIMBATORE': 95, 'TN': 95, 'KL/KA': 140, 'AP': 140, 'METRO': 225, 'ROI': 255 };
+                const above10KgRates = { 'COIMBATORE': 145, 'TN': 145, 'KL/KA': 220, 'AP': 220, 'METRO': 350, 'ROI': 400 };
+                
                 if (weight <= 0.5) {
-                    const rates = { 'COIMBATORE': 240, 'TN': 240, 'KL/KA': 325, 'AP': 325, 'METRO': 350, 'ROI': 400 };
-                    rate = rates[zone];
+                    rate = baseRates[zone];
                     details = `First 0.5 Kg rate: ₹${rate}`;
                 } else if (weight <= 10) {
-                    const baseRates = { 'COIMBATORE': 240, 'TN': 240, 'KL/KA': 325, 'AP': 325, 'METRO': 350, 'ROI': 400 };
-                    const additionalRates = { 'COIMBATORE': 95, 'TN': 95, 'KL/KA': 140, 'AP': 140, 'METRO': 225, 'ROI': 255 };
                     const additionalWeight = Math.ceil((weight - 0.5) / 0.5);
                     rate = baseRates[zone] + (additionalWeight * additionalRates[zone]);
                     details = `Base 0.5 Kg: ₹${baseRates[zone]} + ${additionalWeight} × 0.5 Kg (₹${additionalRates[zone]} each)`;
                 } else {
-                    const rates = { 'COIMBATORE': 145, 'TN': 145, 'KL/KA': 220, 'AP': 220, 'METRO': 350, 'ROI': 400 };
-                    rate = baseRates[zone] + (19 * additionalRates[zone]) + (rates[zone] * Math.floor(weight - 10));
-                    details = `Base 10 Kg rate + Additional ${Math.floor(weight - 10)} Kg @ ₹${rates[zone]}/Kg`;
+                    // Calculate base 10kg rate (0.5kg + 9.5kg in 0.5kg increments)
+                    const base10kgRate = baseRates[zone] + (19 * additionalRates[zone]);
+                    // Calculate additional weight above 10kg
+                    const additionalWeight = Math.floor(weight - 10);
+                    rate = base10kgRate + (additionalWeight * above10KgRates[zone]);
+                    details = `Base 10 Kg: ₹${base10kgRate} + Additional ${additionalWeight} Kg @ ₹${above10KgRates[zone]}/Kg`;
                 }
                 tooltip = "PRIORITY EXPRESS: 0-0.5 Kg flat rate, 0.5-10 Kg in 0.5 Kg increments, above 10 Kg per Kg rate.";
             }
