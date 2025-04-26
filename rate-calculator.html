@@ -139,6 +139,17 @@
             z-index: 10;
             white-space: normal;
         }
+        .home-button {
+            margin-top: 20px;
+            background: linear-gradient(to right, #3498db, #2ecc71);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .home-button::before {
+            content: "🏠";
+        }
     </style>
 </head>
 <body>
@@ -161,7 +172,7 @@
                 <option value="EXP">Express (EXP)</option>
                 <option value="SF">Surface (SF)</option>
                 <option value="AC">Air Cargo (AC)</option>
-                <option value="PEP">Priority Express (PEP)</option>
+                <!-- <option value="PEP">Priority Express (PEP)</option> -->
             </select>
         </div>
         <div class="form-group">
@@ -170,6 +181,7 @@
         </div>
         <button onclick="calculateRate()">Calculate Shipping Rate</button>
         <div id="result"></div>
+        <button class="home-button" onclick="window.location.href='/'">Back To Main Menu</button>
     </div>
 
 <script>
