@@ -172,8 +172,7 @@
                 <option value="EXP">Express (EXP)</option>
                 <option value="SF">Surface (SF)</option>
                 <option value="AC">Air Cargo (AC)</option>
-                <!-- <option value="PEP">Priority Express (PEP)</option> -->
-            </select>
+                </select>
         </div>
         <div class="form-group">
             <label for="weight">Package Weight (Kg)</label>
@@ -185,12 +184,23 @@
     </div>
 
 <script>
+    function setDefaultWeight(mode) {
+        const weightInput = document.getElementById('weight');
+        if (mode === 'EXP') {
+            weightInput.value = '0.100';
+        } else if (mode === 'PEP') {
+            weightInput.value = '0.500';
+        } else {
+            weightInput.value = '1.000';
+        }
+    }
+
     function calculateRate() {
         const zone = document.getElementById('zone').value;
         const mode = document.getElementById('mode').value;
         const weight = parseFloat(document.getElementById('weight').value);
         const resultDiv = document.getElementById('result');
-        
+
         // Validate input
         if (!weight || weight <= 0) {
             showResult('Please enter a valid weight greater than 0 Kg', 'error');
@@ -201,7 +211,7 @@
         let rate = 0;
         let details = '';
         let tooltip = '';
-        
+
         try {
             if (mode === 'EXP') {
                 if (weight <= 0.1) {
@@ -218,11 +228,11 @@
                     details = `Per Kg rate: ₹${rates[zone]} × ${Math.ceil(weight)} Kg`;
                 }
                 tooltip = "EXPRESS: Rates vary by weight slab. Above 0.5 Kg, charges apply per full Kg.";
-            } 
+            }
             else if (mode === 'SF') {
                 const rates = { 'COIMBATORE': 70, 'TN': 95, 'KL/KA': 130, 'AP': 150, 'METRO': 150, 'ROI': 160 };
                 const minCharge = { 'COIMBATORE': 0, 'TN': 0, 'KL/KA': 0, 'AP': 0, 'METRO': 450, 'ROI': 480 };
-                
+
                 if (minCharge[zone] > 0 && weight < 3) {
                     rate = minCharge[zone];
                     details = `Minimum charge for 3 Kg: ₹${rate}`;
@@ -231,24 +241,24 @@
                     details = `Per Kg rate: ₹${rates[zone]} × ${Math.ceil(weight)} Kg`;
                 }
                 tooltip = "SURFACE: Minimum 3 Kg charge applies for METRO (₹450) and ROI (₹480). Otherwise per Kg rate.";
-            } 
+            }
             else if (mode === 'AC') {
                 const rates = { 'COIMBATORE': 0, 'TN': 0, 'KL/KA': 0, 'AP': 150, 'METRO': 300, 'ROI': 300 };
-                
+
                 if (rates[zone] === 0) {
                     showResult('Air Cargo service not available for selected zone', 'error');
                     return;
                 }
-                
+
                 rate = rates[zone] * Math.ceil(weight);
                 details = `Per Kg rate: ₹${rates[zone]} × ${Math.ceil(weight)} Kg`;
                 tooltip = "AIR CARGO: Available only for AP, METRO and ROI zones.";
-            } 
+            }
             else if (mode === 'PEP') {
                 const baseRates = { 'COIMBATORE': 240, 'TN': 240, 'KL/KA': 325, 'AP': 325, 'METRO': 350, 'ROI': 400 };
                 const additionalRates = { 'COIMBATORE': 95, 'TN': 95, 'KL/KA': 140, 'AP': 140, 'METRO': 225, 'ROI': 255 };
                 const above10KgRates = { 'COIMBATORE': 145, 'TN': 145, 'KL/KA': 220, 'AP': 220, 'METRO': 350, 'ROI': 400 };
-                
+
                 if (weight <= 0.5) {
                     rate = baseRates[zone];
                     details = `First 0.5 Kg rate: ₹${rate}`;
@@ -257,21 +267,18 @@
                     rate = baseRates[zone] + (additionalWeight * additionalRates[zone]);
                     details = `Base 0.5 Kg: ₹${baseRates[zone]} + ${additionalWeight} × 0.5 Kg (₹${additionalRates[zone]} each)`;
                 } else {
-                    // Calculate base 10kg rate (0.5kg + 9.5kg in 0.5kg increments)
                     const base10kgRate = baseRates[zone] + (19 * additionalRates[zone]);
-                    // Calculate additional weight above 10kg
                     const additionalWeight = Math.floor(weight - 10);
                     rate = base10kgRate + (additionalWeight * above10KgRates[zone]);
                     details = `Base 10 Kg: ₹${base10kgRate} + Additional ${additionalWeight} Kg @ ₹${above10KgRates[zone]}/Kg`;
                 }
                 tooltip = "PRIORITY EXPRESS: 0-0.5 Kg flat rate, 0.5-10 Kg in 0.5 Kg increments, above 10 Kg per Kg rate.";
             }
-            
+
             showResult(`<div class="rate-display">₹${rate.toFixed(2)}</div>
                        <div>For ${weight} Kg to ${zone} via ${getModeName(mode)}</div>
                        <div class="details">${details}</div>`);
-            
-            // Add tooltip icon if available
+
             if (tooltip) {
                 const tooltipIcon = document.createElement('span');
                 tooltipIcon.className = 'info-icon';
@@ -279,20 +286,20 @@
                 tooltipIcon.textContent = 'i';
                 resultDiv.querySelector('.rate-display').appendChild(tooltipIcon);
             }
-            
+
         } catch (error) {
             showResult('Error calculating rate. Please check your inputs.', 'error');
             console.error(error);
         }
     }
-    
+
     function showResult(message, type = 'success') {
         const resultDiv = document.getElementById('result');
         resultDiv.innerHTML = message;
         resultDiv.style.display = 'block';
         resultDiv.style.borderLeftColor = type === 'error' ? '#e74c3c' : '#2ecc71';
     }
-    
+
     function getModeName(mode) {
         const modes = {
             'EXP': 'Express',
@@ -302,10 +309,24 @@
         };
         return modes[mode] || mode;
     }
-    
-    // Initialize with default calculation
+
+    // Event listeners for automatic calculation
     window.onload = function() {
-        calculateRate();
+        const modeSelect = document.getElementById('mode');
+        setDefaultWeight(modeSelect.value); // Set default weight based on initial mode
+        calculateRate(); // Initial calculation
+
+        // Update weight and recalculate when mode changes
+        modeSelect.addEventListener('change', function() {
+            setDefaultWeight(this.value);
+            calculateRate();
+        });
+
+        // Recalculate when zone changes
+        document.getElementById('zone').addEventListener('change', calculateRate);
+
+        // Recalculate when weight changes
+        document.getElementById('weight').addEventListener('input', calculateRate);
     };
 </script>
 </body>
